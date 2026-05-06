@@ -1,7 +1,6 @@
 package startergin
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/go-spring/spring-core/gs"
 	"github.com/go-spring/stdlib/flatten"
 )
@@ -14,7 +13,7 @@ func init() {
 			r.Provide(
 				NewEngine,
 				gs.IndexArg(0, gs.TagArg("${spring.gin}")),
-			).Condition(gs.OnMissingBean[*gin.Engine]())
+			).Condition(gs.OnMissingBean[*Engine]())
 			r.Provide(NewHTTPServeMux).Condition(gs.OnMissingBean[*gs.HttpServeMux]())
 			return nil
 		},

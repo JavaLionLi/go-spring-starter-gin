@@ -8,14 +8,13 @@ import (
 
 	startergin "github.com/JavaLionLi/go-spring-starter-gin"
 	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
-	"github.com/gin-gonic/gin"
 )
 
 func TestDemoRoutes(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	startergin.SetMode(startergin.TestMode)
 
 	engine, err := startergin.NewEngine(startergin.Config{
-		Mode:     gin.TestMode,
+		Mode:     startergin.TestMode,
 		Logger:   false,
 		Recovery: false,
 		Health:   startergin.HealthConfig{Enabled: false},
@@ -94,11 +93,11 @@ func TestDemoRoutes(t *testing.T) {
 	}
 }
 
-func demoRequest(engine *gin.Engine, method string, path string, headers map[string]string) *httptest.ResponseRecorder {
+func demoRequest(engine *startergin.Engine, method string, path string, headers map[string]string) *httptest.ResponseRecorder {
 	return demoJSONRequest(engine, method, path, "", headers)
 }
 
-func demoJSONRequest(engine *gin.Engine, method string, path string, body string, headers map[string]string) *httptest.ResponseRecorder {
+func demoJSONRequest(engine *startergin.Engine, method string, path string, body string, headers map[string]string) *httptest.ResponseRecorder {
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(method, path, strings.NewReader(body))
 	if body != "" {

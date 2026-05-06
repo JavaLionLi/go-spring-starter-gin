@@ -8,12 +8,11 @@ import (
 	"time"
 
 	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
-	"github.com/gin-gonic/gin"
 )
 
 func TestNewEngineRegistersHealthMiddlewareConfigurerAndRoutes(t *testing.T) {
 	cfg := Config{
-		Mode:     gin.TestMode,
+		Mode:     TestMode,
 		Logger:   false,
 		Recovery: false,
 		Health: HealthConfig{
@@ -25,33 +24,33 @@ func TestNewEngineRegistersHealthMiddlewareConfigurerAndRoutes(t *testing.T) {
 	}
 	deps := &EngineDeps{
 		Middlewares: []Middleware{
-			NewMiddleware(20, func(c *gin.Context) {
+			NewMiddleware(20, func(c *Context) {
 				c.Header("X-Middleware-2", c.GetHeader("X-Middleware-1"))
 				c.Next()
 			}),
-			NewMiddleware(10, func(c *gin.Context) {
+			NewMiddleware(10, func(c *Context) {
 				c.Request.Header.Set("X-Middleware-1", "ok")
 				c.Next()
 			}),
 		},
 		Configurers: []EngineConfigurer{
-			NewEngineConfigurer(10, func(engine *gin.Engine) {
-				engine.NoRoute(func(c *gin.Context) {
+			NewEngineConfigurer(10, func(engine *Engine) {
+				engine.NoRoute(func(c *Context) {
 					c.String(http.StatusNotFound, "missing")
 				})
 			}),
 		},
 		KitItems: []routekit.KitItem{
 			routekit.NewKitItem(10, func(kit *routekit.Kit) {
-				kit.SetHandler("mark", func(c *gin.Context) {
+				kit.SetHandler("mark", func(c *Context) {
 					c.Header("X-Kit", "marked")
 					c.Next()
 				})
 			}),
 		},
 		Registrars: []routekit.Registrar{
-			routekit.NewRegistrar(10, func(engine *gin.Engine, kit routekit.Kit) {
-				engine.GET("/hello", kit.Handler("mark"), func(c *gin.Context) {
+			routekit.NewRegistrar(10, func(engine *routekit.Engine, kit routekit.Kit) {
+				engine.GET("/hello", kit.Handler("mark"), func(c *routekit.Context) {
 					c.String(http.StatusOK, "hello")
 				})
 			}),
@@ -79,7 +78,7 @@ func TestNewEngineRegistersHealthMiddlewareConfigurerAndRoutes(t *testing.T) {
 
 func TestNewEngineWithNilDepsRegistersDefaultHealth(t *testing.T) {
 	cfg := Config{
-		Mode:     gin.TestMode,
+		Mode:     TestMode,
 		Logger:   false,
 		Recovery: false,
 		Health: HealthConfig{
@@ -128,7 +127,7 @@ func TestNewEngineSkipsDisabledHealthAndBlankHealthPaths(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			engine, err := NewEngine(Config{
-				Mode:     gin.TestMode,
+				Mode:     TestMode,
 				Logger:   false,
 				Recovery: false,
 				Health:   tt.health,
@@ -147,7 +146,7 @@ func TestNewEngineSkipsDisabledHealthAndBlankHealthPaths(t *testing.T) {
 
 func TestNewEngineConfiguresCORS(t *testing.T) {
 	cfg := Config{
-		Mode:     gin.TestMode,
+		Mode:     TestMode,
 		Logger:   false,
 		Recovery: false,
 		Health:   HealthConfig{Enabled: false},
@@ -164,8 +163,8 @@ func TestNewEngineConfiguresCORS(t *testing.T) {
 
 	engine, err := NewEngine(cfg, &EngineDeps{
 		Registrars: []routekit.Registrar{
-			routekit.NewRegistrar(10, func(engine *gin.Engine, kit routekit.Kit) {
-				engine.POST("/api/items", func(c *gin.Context) {
+			routekit.NewRegistrar(10, func(engine *routekit.Engine, kit routekit.Kit) {
+				engine.POST("/api/items", func(c *routekit.Context) {
 					c.Header("X-Trace-ID", "trace-1")
 					c.String(http.StatusCreated, "created")
 				})
@@ -211,7 +210,7 @@ func TestNewEngineConfiguresCORS(t *testing.T) {
 
 func TestNewEngineUsesDefaultCORSListsWhenConfiguredListsAreBlank(t *testing.T) {
 	engine, err := NewEngine(Config{
-		Mode:     gin.TestMode,
+		Mode:     TestMode,
 		Logger:   false,
 		Recovery: false,
 		Health:   HealthConfig{Enabled: false},
@@ -242,7 +241,7 @@ func TestNewEngineUsesDefaultCORSListsWhenConfiguredListsAreBlank(t *testing.T) 
 
 func TestNewEngineIgnoresBlankTrustedProxies(t *testing.T) {
 	cfg := Config{
-		Mode:           gin.TestMode,
+		Mode:           TestMode,
 		Logger:         false,
 		Recovery:       false,
 		TrustedProxies: []string{"", "   "},
@@ -257,7 +256,7 @@ func TestNewEngineIgnoresBlankTrustedProxies(t *testing.T) {
 
 func TestNewEngineReturnsTrustedProxyErrors(t *testing.T) {
 	cfg := Config{
-		Mode:           gin.TestMode,
+		Mode:           TestMode,
 		Logger:         false,
 		Recovery:       false,
 		TrustedProxies: []string{"not-a-cidr"},
@@ -272,7 +271,7 @@ func TestNewEngineReturnsTrustedProxyErrors(t *testing.T) {
 
 func TestNewEngineIgnoresNilDependencies(t *testing.T) {
 	engine, err := NewEngine(Config{
-		Mode:     gin.TestMode,
+		Mode:     TestMode,
 		Logger:   false,
 		Recovery: false,
 		Health:   HealthConfig{Enabled: false},
@@ -281,7 +280,7 @@ func TestNewEngineIgnoresNilDependencies(t *testing.T) {
 		Middlewares: []Middleware{
 			nil,
 			NewMiddleware(10, nil),
-			NewMiddleware(20, func(c *gin.Context) {
+			NewMiddleware(20, func(c *Context) {
 				c.Header("X-Middleware", "applied")
 				c.Next()
 			}),
@@ -289,8 +288,8 @@ func TestNewEngineIgnoresNilDependencies(t *testing.T) {
 		Configurers: []EngineConfigurer{
 			nil,
 			NewEngineConfigurer(10, nil),
-			NewEngineConfigurer(20, func(engine *gin.Engine) {
-				engine.GET("/configured", func(c *gin.Context) {
+			NewEngineConfigurer(20, func(engine *Engine) {
+				engine.GET("/configured", func(c *Context) {
 					c.String(http.StatusOK, "configured")
 				})
 			}),
@@ -311,7 +310,7 @@ func TestNewEngineIgnoresNilDependencies(t *testing.T) {
 	}
 }
 
-func assertResponse(t *testing.T, engine *gin.Engine, method string, path string, status int, contains string) *httptest.ResponseRecorder {
+func assertResponse(t *testing.T, engine *Engine, method string, path string, status int, contains string) *httptest.ResponseRecorder {
 	t.Helper()
 
 	recorder := httptest.NewRecorder()

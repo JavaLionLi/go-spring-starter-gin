@@ -8,7 +8,7 @@
 
 - 通过空白导入启用自动装配
 - 在 `init()` 阶段注册 Bean
-- 自动创建 `*gin.Engine`
+- 自动创建 `*startergin.Engine`
 - 自动创建 `*gs.HttpServeMux`，交给 Go-Spring 内置 HTTP Server 启动
 - 业务模块通过有序的 `routekit.Registrar` 注册路由
 
@@ -29,15 +29,14 @@ import (
 	"net/http"
 
 	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
-	"github.com/gin-gonic/gin"
 	"github.com/go-spring/spring-core/gs"
 	_ "github.com/JavaLionLi/go-spring-starter-gin"
 )
 
 func init() {
 	gs.Provide(func() routekit.Registrar {
-		return routekit.NewRegistrar(100, func(engine *gin.Engine, kit routekit.Kit) {
-			engine.GET("/hello", func(c *gin.Context) {
+		return routekit.NewRegistrar(100, func(engine *routekit.Engine, kit routekit.Kit) {
+			engine.GET("/hello", func(c *routekit.Context) {
 				c.String(http.StatusOK, "hello")
 			})
 		})
@@ -110,7 +109,6 @@ package user
 
 import (
 	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
-	"github.com/gin-gonic/gin"
 	"github.com/go-spring/spring-core/gs"
 )
 
@@ -120,7 +118,7 @@ func init() {
 }
 
 func NewRoutes(handler *Handler) routekit.Registrar {
-	return routekit.NewRegistrar(500, func(engine *gin.Engine, kit routekit.Kit) {
+	return routekit.NewRegistrar(500, func(engine *routekit.Engine, kit routekit.Kit) {
 		group := engine.Group("/system/user", kit.Handler("login"))
 		group.GET("", handler.List)
 		group.POST("", handler.Create)
@@ -178,7 +176,7 @@ func init() {
 
 ```go
 func NewRoutes(handler *Handler) routekit.Registrar {
-	return routekit.NewRegistrar(500, func(engine *gin.Engine, kit routekit.Kit) {
+	return routekit.NewRegistrar(500, func(engine *routekit.Engine, kit routekit.Kit) {
 		group := engine.Group("/system/user", kit.Handler("login"))
 		group.DELETE("/:id", kit.Handler("admin"), handler.Delete)
 	})
@@ -196,7 +194,6 @@ package httpx
 
 import (
 	startergin "github.com/JavaLionLi/go-spring-starter-gin"
-	"github.com/gin-gonic/gin"
 	"github.com/go-spring/spring-core/gs"
 )
 
@@ -206,8 +203,8 @@ func init() {
 	})
 }
 
-func RequestID() gin.HandlerFunc {
-	return func(c *gin.Context) {
+func RequestID() startergin.HandlerFunc {
+	return func(c *startergin.Context) {
 		c.Header("X-Request-ID", "example")
 		c.Next()
 	}
@@ -216,9 +213,18 @@ func RequestID() gin.HandlerFunc {
 
 多个全局中间件会按 order 排序后注册。
 
+如果需要绕过 YAML 配置手写 CORS 中间件，也通过 starter 包装使用，不需要业务项目直接引入 `gin-contrib/cors`：
+
+```go
+engine.Use(startergin.CORS(startergin.CORSHandlerConfig{
+	AllowOrigins: []string{"*"},
+	AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+}))
+```
+
 ## 自定义 Gin Engine
 
-需要直接操作 `*gin.Engine` 时，可以注册 `startergin.EngineConfigurer`。适合配置 `NoRoute`、静态资源、特殊路由组等。
+需要直接操作 `*startergin.Engine` 时，可以注册 `startergin.EngineConfigurer`。适合配置 `NoRoute`、静态资源、特殊路由组等。
 
 ```go
 package httpx
@@ -227,15 +233,14 @@ import (
 	"net/http"
 
 	startergin "github.com/JavaLionLi/go-spring-starter-gin"
-	"github.com/gin-gonic/gin"
 	"github.com/go-spring/spring-core/gs"
 )
 
 func init() {
 	gs.Provide(func() startergin.EngineConfigurer {
-		return startergin.NewEngineConfigurer(100, func(engine *gin.Engine) {
-			engine.NoRoute(func(c *gin.Context) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return startergin.NewEngineConfigurer(100, func(engine *startergin.Engine) {
+			engine.NoRoute(func(c *startergin.Context) {
+				c.JSON(http.StatusNotFound, startergin.H{"error": "not found"})
 			})
 		})
 	})
@@ -246,13 +251,13 @@ Configurer 的执行顺序在全局中间件和健康检查之后、业务路由
 
 ## 覆盖自动装配
 
-如果业务项目自己提供了 `*gin.Engine`，starter 不会重复创建。
+如果业务项目自己提供了 `*startergin.Engine`，starter 不会重复创建。
 
 ```go
 func init() {
-	gs.Provide(func() *gin.Engine {
-		engine := gin.New()
-		engine.Use(gin.Recovery())
+	gs.Provide(func() *startergin.Engine {
+		engine := startergin.New()
+		engine.Use(startergin.Recovery())
 		return engine
 	})
 }
@@ -262,7 +267,7 @@ func init() {
 
 ```go
 func init() {
-	gs.Provide(func(engine *gin.Engine) *gs.HttpServeMux {
+	gs.Provide(func(engine *startergin.Engine) *gs.HttpServeMux {
 		return &gs.HttpServeMux{Handler: engine}
 	})
 }

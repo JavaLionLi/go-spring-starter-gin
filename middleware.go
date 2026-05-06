@@ -1,18 +1,16 @@
 package startergin
 
-import "github.com/gin-gonic/gin"
-
 type Middleware interface {
 	Order() int
-	Handler() gin.HandlerFunc
+	Handler() HandlerFunc
 }
 
 type middleware struct {
 	order   int
-	handler gin.HandlerFunc
+	handler HandlerFunc
 }
 
-func NewMiddleware(order int, handler gin.HandlerFunc) Middleware {
+func NewMiddleware(order int, handler HandlerFunc) Middleware {
 	return middleware{order: order, handler: handler}
 }
 
@@ -20,21 +18,21 @@ func (m middleware) Order() int {
 	return m.order
 }
 
-func (m middleware) Handler() gin.HandlerFunc {
+func (m middleware) Handler() HandlerFunc {
 	return m.handler
 }
 
 type EngineConfigurer interface {
 	Order() int
-	Configure(*gin.Engine)
+	Configure(*Engine)
 }
 
 type engineConfigurer struct {
 	order int
-	fn    func(*gin.Engine)
+	fn    func(*Engine)
 }
 
-func NewEngineConfigurer(order int, fn func(*gin.Engine)) EngineConfigurer {
+func NewEngineConfigurer(order int, fn func(*Engine)) EngineConfigurer {
 	return engineConfigurer{order: order, fn: fn}
 }
 
@@ -42,7 +40,7 @@ func (c engineConfigurer) Order() int {
 	return c.order
 }
 
-func (c engineConfigurer) Configure(engine *gin.Engine) {
+func (c engineConfigurer) Configure(engine *Engine) {
 	if c.fn != nil {
 		c.fn(engine)
 	}

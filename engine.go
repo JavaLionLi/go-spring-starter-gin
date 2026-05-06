@@ -7,7 +7,6 @@ import (
 
 	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
 	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 )
 
 type EngineDeps struct {
@@ -17,15 +16,15 @@ type EngineDeps struct {
 	Registrars  []routekit.Registrar `autowire:"?"`
 }
 
-func NewEngine(cfg Config, deps *EngineDeps) (*gin.Engine, error) {
+func NewEngine(cfg Config, deps *EngineDeps) (*Engine, error) {
 	if deps == nil {
 		deps = &EngineDeps{}
 	}
 	if cfg.Mode != "" {
-		gin.SetMode(cfg.Mode)
+		SetMode(cfg.Mode)
 	}
 
-	engine := gin.New()
+	engine := New()
 	trustedProxies := cleanStrings(cfg.TrustedProxies)
 	if len(trustedProxies) > 0 {
 		if err := engine.SetTrustedProxies(trustedProxies); err != nil {
@@ -33,10 +32,10 @@ func NewEngine(cfg Config, deps *EngineDeps) (*gin.Engine, error) {
 		}
 	}
 	if cfg.Logger {
-		engine.Use(gin.Logger())
+		engine.Use(Logger())
 	}
 	if cfg.Recovery {
-		engine.Use(gin.Recovery())
+		engine.Use(Recovery())
 	}
 	if cfg.CORS.Enabled {
 		engine.Use(cors.New(cors.Config{
@@ -57,23 +56,23 @@ func NewEngine(cfg Config, deps *EngineDeps) (*gin.Engine, error) {
 	return engine, nil
 }
 
-func registerHealth(engine *gin.Engine, cfg HealthConfig) {
+func registerHealth(engine *Engine, cfg HealthConfig) {
 	if !cfg.Enabled {
 		return
 	}
 	if cfg.Healthz != "" {
-		engine.GET(cfg.Healthz, func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		engine.GET(cfg.Healthz, func(c *Context) {
+			c.JSON(http.StatusOK, H{"status": "ok"})
 		})
 	}
 	if cfg.Ping != "" {
-		engine.GET(cfg.Ping, func(c *gin.Context) {
+		engine.GET(cfg.Ping, func(c *Context) {
 			c.String(http.StatusOK, "pong")
 		})
 	}
 }
 
-func registerMiddlewares(engine *gin.Engine, middlewares []Middleware) {
+func registerMiddlewares(engine *Engine, middlewares []Middleware) {
 	ordered := append([]Middleware(nil), middlewares...)
 	sort.SliceStable(ordered, func(i, j int) bool {
 		if ordered[i] == nil {
@@ -94,7 +93,7 @@ func registerMiddlewares(engine *gin.Engine, middlewares []Middleware) {
 	}
 }
 
-func runConfigurers(engine *gin.Engine, configurers []EngineConfigurer) {
+func runConfigurers(engine *Engine, configurers []EngineConfigurer) {
 	ordered := append([]EngineConfigurer(nil), configurers...)
 	sort.SliceStable(ordered, func(i, j int) bool {
 		if ordered[i] == nil {

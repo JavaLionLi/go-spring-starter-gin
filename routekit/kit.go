@@ -1,22 +1,18 @@
 package routekit
 
-import (
-	"sort"
-
-	"github.com/gin-gonic/gin"
-)
+import "sort"
 
 type Registrar interface {
 	Order() int
-	RegisterRoutes(*gin.Engine, Kit)
+	RegisterRoutes(*Engine, Kit)
 }
 
 type registrar struct {
 	order int
-	fn    func(*gin.Engine, Kit)
+	fn    func(*Engine, Kit)
 }
 
-func NewRegistrar(order int, fn func(*gin.Engine, Kit)) Registrar {
+func NewRegistrar(order int, fn func(*Engine, Kit)) Registrar {
 	return registrar{order: order, fn: fn}
 }
 
@@ -24,13 +20,13 @@ func (r registrar) Order() int {
 	return r.order
 }
 
-func (r registrar) RegisterRoutes(engine *gin.Engine, kit Kit) {
+func (r registrar) RegisterRoutes(engine *Engine, kit Kit) {
 	if r.fn != nil {
 		r.fn(engine, kit)
 	}
 }
 
-func RegisterAll(engine *gin.Engine, kit Kit, registrars []Registrar) {
+func RegisterAll(engine *Engine, kit Kit, registrars []Registrar) {
 	ordered := append([]Registrar(nil), registrars...)
 	sort.SliceStable(ordered, func(i, j int) bool {
 		if ordered[i] == nil {
@@ -49,11 +45,11 @@ func RegisterAll(engine *gin.Engine, kit Kit, registrars []Registrar) {
 }
 
 type Kit struct {
-	handlers map[string]gin.HandlerFunc
+	handlers map[string]HandlerFunc
 }
 
 func NewKit(items []KitItem) Kit {
-	kit := Kit{handlers: map[string]gin.HandlerFunc{}}
+	kit := Kit{handlers: map[string]HandlerFunc{}}
 	ordered := append([]KitItem(nil), items...)
 	sort.SliceStable(ordered, func(i, j int) bool {
 		if ordered[i] == nil {
@@ -72,7 +68,7 @@ func NewKit(items []KitItem) Kit {
 	return kit
 }
 
-func (k Kit) Handler(name string) gin.HandlerFunc {
+func (k Kit) Handler(name string) HandlerFunc {
 	if k.handlers == nil {
 		return NoOp()
 	}
@@ -82,17 +78,17 @@ func (k Kit) Handler(name string) gin.HandlerFunc {
 	return NoOp()
 }
 
-func (k *Kit) SetHandler(name string, handler gin.HandlerFunc) {
+func (k *Kit) SetHandler(name string, handler HandlerFunc) {
 	if k.handlers == nil {
-		k.handlers = map[string]gin.HandlerFunc{}
+		k.handlers = map[string]HandlerFunc{}
 	}
 	if name != "" && handler != nil {
 		k.handlers[name] = handler
 	}
 }
 
-func NoOp() gin.HandlerFunc {
-	return func(c *gin.Context) {
+func NoOp() HandlerFunc {
+	return func(c *Context) {
 		c.Next()
 	}
 }

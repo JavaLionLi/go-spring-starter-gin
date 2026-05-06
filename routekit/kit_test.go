@@ -4,26 +4,24 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/gin-gonic/gin"
 )
 
 func TestRegisterAllSortsRegistrarsByOrder(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	SetMode(TestMode)
 
-	engine := gin.New()
+	engine := New()
 	calls := make([]int, 0, 4)
 
 	RegisterAll(engine, Kit{}, []Registrar{
-		NewRegistrar(20, func(*gin.Engine, Kit) {
+		NewRegistrar(20, func(*Engine, Kit) {
 			calls = append(calls, 20)
 		}),
 		nil,
 		NewRegistrar(10, nil),
-		NewRegistrar(10, func(*gin.Engine, Kit) {
+		NewRegistrar(10, func(*Engine, Kit) {
 			calls = append(calls, 10)
 		}),
-		NewRegistrar(10, func(*gin.Engine, Kit) {
+		NewRegistrar(10, func(*Engine, Kit) {
 			calls = append(calls, 11)
 		}),
 	})
@@ -34,25 +32,25 @@ func TestRegisterAllSortsRegistrarsByOrder(t *testing.T) {
 }
 
 func TestKitHandlerUsesNamedHandler(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	SetMode(TestMode)
 
 	kit := NewKit([]KitItem{
 		NewKitItem(20, func(kit *Kit) {
-			kit.SetHandler("auth", func(c *gin.Context) {
+			kit.SetHandler("auth", func(c *Context) {
 				c.Header("X-Auth", "late")
 				c.Next()
 			})
 		}),
 		NewKitItem(10, func(kit *Kit) {
-			kit.SetHandler("auth", func(c *gin.Context) {
+			kit.SetHandler("auth", func(c *Context) {
 				c.Header("X-Auth", "early")
 				c.Next()
 			})
 		}),
 	})
 
-	engine := gin.New()
-	engine.GET("/secure", kit.Handler("auth"), func(c *gin.Context) {
+	engine := New()
+	engine.GET("/secure", kit.Handler("auth"), func(c *Context) {
 		c.String(http.StatusOK, "ok")
 	})
 
@@ -73,25 +71,25 @@ func TestKitIgnoresNilItemsBlankNamesAndNilHandlers(t *testing.T) {
 		nil,
 		NewKitItem(10, nil),
 		NewKitItem(20, func(kit *Kit) {
-			kit.SetHandler("", func(c *gin.Context) {
+			kit.SetHandler("", func(c *Context) {
 				c.AbortWithStatus(http.StatusInternalServerError)
 			})
 			kit.SetHandler("nil", nil)
-			kit.SetHandler("ok", func(c *gin.Context) {
+			kit.SetHandler("ok", func(c *Context) {
 				c.Header("X-Kit", "ok")
 				c.Next()
 			})
 		}),
 	})
 
-	engine := gin.New()
-	engine.GET("/ok", kit.Handler("ok"), func(c *gin.Context) {
+	engine := New()
+	engine.GET("/ok", kit.Handler("ok"), func(c *Context) {
 		c.String(http.StatusOK, "ok")
 	})
-	engine.GET("/blank", kit.Handler(""), func(c *gin.Context) {
+	engine.GET("/blank", kit.Handler(""), func(c *Context) {
 		c.String(http.StatusOK, "blank")
 	})
-	engine.GET("/nil", kit.Handler("nil"), func(c *gin.Context) {
+	engine.GET("/nil", kit.Handler("nil"), func(c *Context) {
 		c.String(http.StatusOK, "nil")
 	})
 
@@ -116,13 +114,13 @@ func TestKitIgnoresNilItemsBlankNamesAndNilHandlers(t *testing.T) {
 
 func TestSetHandlerInitializesNilKitMap(t *testing.T) {
 	var kit Kit
-	kit.SetHandler("trace", func(c *gin.Context) {
+	kit.SetHandler("trace", func(c *Context) {
 		c.Header("X-Trace", "set")
 		c.Next()
 	})
 
-	engine := gin.New()
-	engine.GET("/trace", kit.Handler("trace"), func(c *gin.Context) {
+	engine := New()
+	engine.GET("/trace", kit.Handler("trace"), func(c *Context) {
 		c.String(http.StatusOK, "ok")
 	})
 
@@ -136,10 +134,10 @@ func TestSetHandlerInitializesNilKitMap(t *testing.T) {
 }
 
 func TestMissingKitHandlerIsNoOp(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	SetMode(TestMode)
 
-	engine := gin.New()
-	engine.GET("/open", Kit{}.Handler("missing"), func(c *gin.Context) {
+	engine := New()
+	engine.GET("/open", Kit{}.Handler("missing"), func(c *Context) {
 		c.String(http.StatusOK, "ok")
 	})
 
@@ -153,10 +151,10 @@ func TestMissingKitHandlerIsNoOp(t *testing.T) {
 }
 
 func TestNoOpContinuesToNextHandler(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	SetMode(TestMode)
 
-	engine := gin.New()
-	engine.GET("/next", NoOp(), func(c *gin.Context) {
+	engine := New()
+	engine.GET("/next", NoOp(), func(c *Context) {
 		c.String(http.StatusAccepted, "next")
 	})
 
@@ -169,7 +167,7 @@ func TestNoOpContinuesToNextHandler(t *testing.T) {
 	}
 }
 
-func performRequest(engine *gin.Engine, method string, path string) *httptest.ResponseRecorder {
+func performRequest(engine *Engine, method string, path string) *httptest.ResponseRecorder {
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(method, path, nil)
 	engine.ServeHTTP(recorder, request)

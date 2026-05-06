@@ -8,7 +8,7 @@ It follows the official Go-Spring starter style:
 
 - use a blank import to enable auto-configuration
 - register beans during `init()`
-- auto-create `*gin.Engine`
+- auto-create `*startergin.Engine`
 - auto-create `*gs.HttpServeMux` for Go-Spring's HTTP server
 - let business modules contribute routes through ordered `routekit.Registrar` beans
 
@@ -29,15 +29,14 @@ import (
 	"net/http"
 
 	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
-	"github.com/gin-gonic/gin"
 	"github.com/go-spring/spring-core/gs"
 	_ "github.com/JavaLionLi/go-spring-starter-gin"
 )
 
 func init() {
 	gs.Provide(func() routekit.Registrar {
-		return routekit.NewRegistrar(100, func(engine *gin.Engine, kit routekit.Kit) {
-			engine.GET("/hello", func(c *gin.Context) {
+		return routekit.NewRegistrar(100, func(engine *routekit.Engine, kit routekit.Kit) {
+			engine.GET("/hello", func(c *routekit.Context) {
 				c.String(http.StatusOK, "hello")
 			})
 		})
@@ -110,7 +109,6 @@ package user
 
 import (
 	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
-	"github.com/gin-gonic/gin"
 	"github.com/go-spring/spring-core/gs"
 )
 
@@ -120,7 +118,7 @@ func init() {
 }
 
 func NewRoutes(handler *Handler) routekit.Registrar {
-	return routekit.NewRegistrar(500, func(engine *gin.Engine, kit routekit.Kit) {
+	return routekit.NewRegistrar(500, func(engine *routekit.Engine, kit routekit.Kit) {
 		group := engine.Group("/system/user", kit.Handler("login"))
 		group.GET("", handler.List)
 		group.POST("", handler.Create)
@@ -178,7 +176,7 @@ Use them in routes:
 
 ```go
 func NewRoutes(handler *Handler) routekit.Registrar {
-	return routekit.NewRegistrar(500, func(engine *gin.Engine, kit routekit.Kit) {
+	return routekit.NewRegistrar(500, func(engine *routekit.Engine, kit routekit.Kit) {
 		group := engine.Group("/system/user", kit.Handler("login"))
 		group.DELETE("/:id", kit.Handler("admin"), handler.Delete)
 	})
@@ -196,7 +194,6 @@ package httpx
 
 import (
 	startergin "github.com/JavaLionLi/go-spring-starter-gin"
-	"github.com/gin-gonic/gin"
 	"github.com/go-spring/spring-core/gs"
 )
 
@@ -206,8 +203,8 @@ func init() {
 	})
 }
 
-func RequestID() gin.HandlerFunc {
-	return func(c *gin.Context) {
+func RequestID() startergin.HandlerFunc {
+	return func(c *startergin.Context) {
 		c.Header("X-Request-ID", "example")
 		c.Next()
 	}
@@ -216,9 +213,18 @@ func RequestID() gin.HandlerFunc {
 
 Middlewares are sorted by order before registration.
 
+If you need a custom CORS middleware outside the YAML config, use the starter wrapper instead of importing `gin-contrib/cors`:
+
+```go
+engine.Use(startergin.CORS(startergin.CORSHandlerConfig{
+	AllowOrigins: []string{"*"},
+	AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+}))
+```
+
 ## Engine Customization
 
-Use `startergin.EngineConfigurer` for direct access to `*gin.Engine`, for example `NoRoute`, static files, trusted platform settings, or custom route groups.
+Use `startergin.EngineConfigurer` for direct access to `*startergin.Engine`, for example `NoRoute`, static files, trusted platform settings, or custom route groups.
 
 ```go
 package httpx
@@ -227,15 +233,14 @@ import (
 	"net/http"
 
 	startergin "github.com/JavaLionLi/go-spring-starter-gin"
-	"github.com/gin-gonic/gin"
 	"github.com/go-spring/spring-core/gs"
 )
 
 func init() {
 	gs.Provide(func() startergin.EngineConfigurer {
-		return startergin.NewEngineConfigurer(100, func(engine *gin.Engine) {
-			engine.NoRoute(func(c *gin.Context) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return startergin.NewEngineConfigurer(100, func(engine *startergin.Engine) {
+			engine.NoRoute(func(c *startergin.Context) {
+				c.JSON(http.StatusNotFound, startergin.H{"error": "not found"})
 			})
 		})
 	})
@@ -246,13 +251,13 @@ Configurers run after global middlewares and health routes, before business regi
 
 ## Override Auto Configuration
 
-If your application provides its own `*gin.Engine`, this starter will not create another one.
+If your application provides its own `*startergin.Engine`, this starter will not create another one.
 
 ```go
 func init() {
-	gs.Provide(func() *gin.Engine {
-		engine := gin.New()
-		engine.Use(gin.Recovery())
+	gs.Provide(func() *startergin.Engine {
+		engine := startergin.New()
+		engine.Use(startergin.Recovery())
 		return engine
 	})
 }
@@ -262,7 +267,7 @@ If your application provides its own `*gs.HttpServeMux`, this starter will not c
 
 ```go
 func init() {
-	gs.Provide(func(engine *gin.Engine) *gs.HttpServeMux {
+	gs.Provide(func(engine *startergin.Engine) *gs.HttpServeMux {
 		return &gs.HttpServeMux{Handler: engine}
 	})
 }

@@ -1,0 +1,92 @@
+package startergin
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+func TestReExportedGinHelpersBuildRoutesWithoutGinImport(t *testing.T) {
+	SetMode(TestMode)
+
+	engine := New()
+	engine.GET("/json", func(c *Context) {
+		c.JSON(http.StatusOK, H{"ok": true})
+	})
+	engine.GET("/wrapped", WrapF(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusAccepted)
+		_, _ = w.Write([]byte("wrapped"))
+	}))
+	engine.GET("/secure", BasicAuth(Accounts{"demo": "secret"}), func(c *Context) {
+		c.String(http.StatusOK, c.GetString(AuthUserKey))
+	})
+
+	json := aliasRequest(engine, http.MethodGet, "/json", "")
+	if json.Code != http.StatusOK || json.Body.String() != `{"ok":true}` {
+		t.Fatalf("/json status = %d body = %q", json.Code, json.Body.String())
+	}
+
+	wrapped := aliasRequest(engine, http.MethodGet, "/wrapped", "")
+	if wrapped.Code != http.StatusAccepted || wrapped.Body.String() != "wrapped" {
+		t.Fatalf("/wrapped status = %d body = %q", wrapped.Code, wrapped.Body.String())
+	}
+
+	unauthorized := aliasRequest(engine, http.MethodGet, "/secure", "")
+	if unauthorized.Code != http.StatusUnauthorized {
+		t.Fatalf("/secure unauthorized status = %d", unauthorized.Code)
+	}
+
+	authorized := aliasRequest(engine, http.MethodGet, "/secure", "Basic ZGVtbzpzZWNyZXQ=")
+	if authorized.Code != http.StatusOK || authorized.Body.String() != "demo" {
+		t.Fatalf("/secure authorized status = %d body = %q", authorized.Code, authorized.Body.String())
+	}
+}
+
+func TestCORSHelperBuildsCorsMiddlewareWithoutCorsImport(t *testing.T) {
+	SetMode(TestMode)
+
+	engine := New()
+	engine.Use(CORS(CORSHandlerConfig{
+		AllowOrigins: []string{"https://app.example.com"},
+		AllowMethods: []string{http.MethodPost},
+		AllowHeaders: []string{"Authorization"},
+	}))
+	engine.POST("/items", func(c *Context) {
+		c.Status(http.StatusCreated)
+	})
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodOptions, "/items", nil)
+	request.Header.Set("Origin", "https://app.example.com")
+	request.Header.Set("Access-Control-Request-Method", http.MethodPost)
+	request.Header.Set("Access-Control-Request-Headers", "Authorization")
+	engine.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("preflight status = %d body = %q", recorder.Code, recorder.Body.String())
+	}
+	if got := recorder.Header().Get("Access-Control-Allow-Origin"); got != "https://app.example.com" {
+		t.Fatalf("allow origin = %q", got)
+	}
+}
+
+func TestCreateTestContextAliases(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	context, engine := CreateTestContext(recorder)
+	if context == nil {
+		t.Fatal("expected test context")
+	}
+	if engine == nil {
+		t.Fatal("expected test engine")
+	}
+}
+
+func aliasRequest(engine *Engine, method string, path string, authorization string) *httptest.ResponseRecorder {
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(method, path, nil)
+	if authorization != "" {
+		request.Header.Set("Authorization", authorization)
+	}
+	engine.ServeHTTP(recorder, request)
+	return recorder
+}

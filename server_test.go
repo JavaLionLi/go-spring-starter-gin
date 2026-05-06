@@ -1,13 +1,9 @@
 package startergin
 
-import (
-	"testing"
-
-	"github.com/gin-gonic/gin"
-)
+import "testing"
 
 func TestNewHTTPServeMux(t *testing.T) {
-	engine := gin.New()
+	engine := New()
 	mux, err := NewHTTPServeMux(engine)
 	if err != nil {
 		t.Fatalf("new serve mux: %v", err)

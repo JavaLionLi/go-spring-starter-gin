@@ -310,9 +310,17 @@ Then visit:
 curl http://localhost:8080/hello
 curl http://localhost:8080/healthz
 curl http://localhost:8080/ping
+curl -H "X-Demo-Token: demo-token" http://localhost:8080/api/users/42
+curl -X POST http://localhost:8080/api/users \
+  -H "Content-Type: application/json" \
+  -H "X-Demo-Token: demo-token" \
+  -d '{"name":"alice"}'
+curl -X DELETE http://localhost:8080/api/users/42 \
+  -H "X-Demo-Token: demo-token" \
+  -H "X-Demo-Role: admin"
 ```
 
-The demo uses `examples/basic/config/application.yml` to set `spring.http.server.addr` to `:8080`.
+The demo uses `examples/basic/config/application.yml` to set `spring.http.server.addr` to `:8080` and show Gin mode, health, CORS, global middleware, named route handlers, route registration, and `NoRoute` customization.
 
 ## Tests
 

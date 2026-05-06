@@ -310,9 +310,17 @@ go run .
 curl http://localhost:8080/hello
 curl http://localhost:8080/healthz
 curl http://localhost:8080/ping
+curl -H "X-Demo-Token: demo-token" http://localhost:8080/api/users/42
+curl -X POST http://localhost:8080/api/users \
+  -H "Content-Type: application/json" \
+  -H "X-Demo-Token: demo-token" \
+  -d '{"name":"alice"}'
+curl -X DELETE http://localhost:8080/api/users/42 \
+  -H "X-Demo-Token: demo-token" \
+  -H "X-Demo-Role: admin"
 ```
 
-Demo 使用 `examples/basic/config/application.yml` 将 `spring.http.server.addr` 配置为 `:8080`。
+Demo 使用 `examples/basic/config/application.yml` 将 `spring.http.server.addr` 配置为 `:8080`，并展示 Gin mode、健康检查、CORS、全局中间件、命名路由中间件、路由注册和 `NoRoute` 自定义。
 
 ## 测试
 

@@ -10,6 +10,7 @@ spring:
     mode: debug
     logger: true
     recovery: true
+    trusted-proxies: []
     health:
       enabled: true
       healthz: /healthz
@@ -17,3 +18,8 @@ spring:
     cors:
       enabled: true
       allow-origins: ["*"]
+      allow-methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+      allow-headers: [Origin, Content-Type, Accept, Authorization, X-Request-ID, X-Demo-Token, X-Demo-Role]
+      expose-headers: [Content-Length, X-Request-ID]
+      allow-credentials: false
+      max-age: 12h

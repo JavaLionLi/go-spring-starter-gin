@@ -10,7 +10,7 @@
 - 在 `init()` 阶段注册 Bean
 - 自动创建 `*startergin.Engine`
 - 自动创建 `*gs.HttpServeMux`，交给 Go-Spring 内置 HTTP Server 启动
-- 业务模块通过有序的 `routekit.Registrar` 注册路由
+- 业务模块可以注入 `*startergin.Engine` 后显式注册路由
 
 ## 安装
 
@@ -28,18 +28,22 @@ package main
 import (
 	"net/http"
 
-	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
+	startergin "github.com/JavaLionLi/go-spring-starter-gin"
 	"github.com/go-spring/spring-core/gs"
 	_ "github.com/JavaLionLi/go-spring-starter-gin"
 )
 
+type routes struct {
+	Engine *startergin.Engine `autowire:""`
+}
+
 func init() {
-	gs.Provide(func() routekit.Registrar {
-		return routekit.NewRegistrar(100, func(engine *routekit.Engine, kit routekit.Kit) {
-			engine.GET("/hello", func(c *routekit.Context) {
-				c.String(http.StatusOK, "hello")
-			})
-		})
+	gs.Provide(&routes{}).Init((*routes).Register)
+}
+
+func (r *routes) Register() {
+	r.Engine.GET("/hello", func(c *startergin.Context) {
+		c.String(http.StatusOK, "hello")
 	})
 }
 
@@ -102,29 +106,32 @@ spring:
 
 ## 注册业务路由
 
-每个业务模块可以提供一个 `routekit.Registrar`。多个 Registrar 会按 `Order()` 从小到大注册。
+推荐让业务模块直接注入 `*startergin.Engine`，并在 Bean 初始化阶段显式注册路由。这样路由、中间件和依赖关系都在业务代码附近，阅读路径更连续。
 
 ```go
 package user
 
 import (
-	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
+	startergin "github.com/JavaLionLi/go-spring-starter-gin"
 	"github.com/go-spring/spring-core/gs"
 )
 
-func init() {
-	gs.Provide(NewHandler)
-	gs.Provide(NewRoutes)
+type Routes struct {
+	Engine  *startergin.Engine `autowire:""`
+	Handler *Handler           `autowire:""`
 }
 
-func NewRoutes(handler *Handler) routekit.Registrar {
-	return routekit.NewRegistrar(500, func(engine *routekit.Engine, kit routekit.Kit) {
-		group := engine.Group("/system/user", kit.Handler("login"))
-		group.GET("", handler.List)
-		group.POST("", handler.Create)
-		group.PUT("/:id", handler.Update)
-		group.DELETE("/:id", handler.Delete)
-	})
+func init() {
+	gs.Provide(NewHandler)
+	gs.Provide(&Routes{}).Init((*Routes).Register)
+}
+
+func (r *Routes) Register() {
+	group := r.Engine.Group("/system/user", RequireLogin())
+	group.GET("", r.Handler.List)
+	group.POST("", r.Handler.Create)
+	group.PUT("/:id", r.Handler.Update)
+	group.DELETE("/:id", r.Handler.Delete)
 }
 ```
 
@@ -150,44 +157,18 @@ import (
 
 ## 路由级中间件
 
-`routekit.Kit` 用来放路由级通用中间件，比如登录校验、权限校验、角色校验、接口加密、限流等。
-
-先注册命名中间件：
+路由级中间件建议直接用 Gin 的写法传给 `Group` 或具体路由。
 
 ```go
-package auth
-
-import (
-	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
-	"github.com/go-spring/spring-core/gs"
-)
-
-func init() {
-	gs.Provide(func() routekit.KitItem {
-		return routekit.NewKitItem(100, func(kit *routekit.Kit) {
-			kit.SetHandler("login", RequireLogin())
-			kit.SetHandler("admin", RequireRole("admin"))
-		})
-	})
+func (r *Routes) Register() {
+	group := r.Engine.Group("/system/user", RequireLogin())
+	group.DELETE("/:id", RequireRole("admin"), r.Handler.Delete)
 }
 ```
-
-在路由里使用：
-
-```go
-func NewRoutes(handler *Handler) routekit.Registrar {
-	return routekit.NewRegistrar(500, func(engine *routekit.Engine, kit routekit.Kit) {
-		group := engine.Group("/system/user", kit.Handler("login"))
-		group.DELETE("/:id", kit.Handler("admin"), handler.Delete)
-	})
-}
-```
-
-如果指定名称不存在，`kit.Handler("xxx")` 会返回空操作中间件，因此业务模块不需要额外判空。
 
 ## 全局中间件
 
-需要通过 `engine.Use(...)` 挂载的全局中间件，可以注册为 `startergin.Middleware`。
+全局中间件建议在显式注册路由的同一个初始化入口里调用 `engine.Use(...)`。
 
 ```go
 package httpx
@@ -197,10 +178,16 @@ import (
 	"github.com/go-spring/spring-core/gs"
 )
 
+type Routes struct {
+	Engine *startergin.Engine `autowire:""`
+}
+
 func init() {
-	gs.Provide(func() startergin.Middleware {
-		return startergin.NewMiddleware(100, RequestID())
-	})
+	gs.Provide(&Routes{}).Init((*Routes).Register)
+}
+
+func (r *Routes) Register() {
+	r.Engine.Use(RequestID())
 }
 
 func RequestID() startergin.HandlerFunc {
@@ -210,8 +197,6 @@ func RequestID() startergin.HandlerFunc {
 	}
 }
 ```
-
-多个全局中间件会按 order 排序后注册。
 
 如果需要绕过 YAML 配置手写 CORS 中间件，也通过 starter 包装使用，不需要业务项目直接引入 `gin-contrib/cors`：
 
@@ -224,30 +209,58 @@ engine.Use(startergin.CORS(startergin.CORSHandlerConfig{
 
 ## 自定义 Gin Engine
 
-需要直接操作 `*startergin.Engine` 时，可以注册 `startergin.EngineConfigurer`。适合配置 `NoRoute`、静态资源、特殊路由组等。
+需要直接操作 `*startergin.Engine` 时，也建议在初始化入口里显式调用。适合配置 `NoRoute`、静态资源、特殊路由组等。
 
 ```go
-package httpx
-
-import (
-	"net/http"
-
-	startergin "github.com/JavaLionLi/go-spring-starter-gin"
-	"github.com/go-spring/spring-core/gs"
-)
-
-func init() {
-	gs.Provide(func() startergin.EngineConfigurer {
-		return startergin.NewEngineConfigurer(100, func(engine *startergin.Engine) {
-			engine.NoRoute(func(c *startergin.Context) {
-				c.JSON(http.StatusNotFound, startergin.H{"error": "not found"})
-			})
-		})
+func (r *Routes) Register() {
+	r.Engine.NoRoute(func(c *startergin.Context) {
+		c.JSON(http.StatusNotFound, startergin.H{"error": "not found"})
 	})
 }
 ```
 
-Configurer 的执行顺序在全局中间件和健康检查之后、业务路由注册之前。
+starter 内置配置的执行顺序是：logger/recovery、CORS、健康检查，然后进入业务 Bean 初始化阶段。
+
+## 高级：自动收集扩展点
+
+如果项目模块很多，并且希望业务模块自注册，也可以使用 starter 保留的自动收集能力。starter 会收集 `startergin.Middleware`、`startergin.EngineConfigurer`、`routekit.KitItem` 和 `routekit.Registrar`，并按 `Order()` 排序。
+
+```go
+package user
+
+import (
+	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
+	"github.com/go-spring/spring-core/gs"
+)
+
+func init() {
+	gs.Provide(NewHandler)
+	gs.Provide(NewRoutes)
+}
+
+func NewRoutes(handler *Handler) routekit.Registrar {
+	return routekit.NewRegistrar(500, func(engine *routekit.Engine, kit routekit.Kit) {
+		group := engine.Group("/system/user", kit.Handler("login"))
+		group.GET("", handler.List)
+		group.POST("", handler.Create)
+		group.PUT("/:id", handler.Update)
+		group.DELETE("/:id", handler.Delete)
+	})
+}
+```
+
+`routekit.Kit` 可以放命名路由中间件：
+
+```go
+func init() {
+	gs.Provide(func() routekit.KitItem {
+		return routekit.NewKitItem(100, func(kit *routekit.Kit) {
+			kit.SetHandler("login", RequireLogin())
+			kit.SetHandler("admin", RequireRole("admin"))
+		})
+	})
+}
+```
 
 ## 覆盖自动装配
 
@@ -279,7 +292,6 @@ func init() {
 your-app/
   cmd/server/main.go
   configs/application.yml
-  internal/modules/all/all.go
   internal/modules/auth/
   internal/modules/system/user/
 ```
@@ -292,7 +304,8 @@ package main
 import (
 	"github.com/go-spring/spring-core/gs"
 	_ "github.com/JavaLionLi/go-spring-starter-gin"
-	_ "your-app/internal/modules/all"
+	_ "your-app/internal/modules/auth"
+	_ "your-app/internal/modules/system/user"
 )
 
 func main() {
@@ -325,7 +338,7 @@ curl -X DELETE http://localhost:8080/api/users/42 \
   -H "X-Demo-Role: admin"
 ```
 
-Demo 使用 `examples/basic/config/application.yml` 将 `spring.http.server.addr` 配置为 `:8080`，并展示 Gin mode、健康检查、CORS、全局中间件、命名路由中间件、路由注册和 `NoRoute` 自定义。
+Demo 使用 `examples/basic/config/application.yml` 将 `spring.http.server.addr` 配置为 `:8080`，并展示 Gin mode、健康检查、CORS、全局中间件、路由注册和 `NoRoute` 自定义。
 
 ## 测试
 

@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	startergin "github.com/JavaLionLi/go-spring-starter-gin"
-	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
 )
 
 func TestDemoRoutes(t *testing.T) {
@@ -19,18 +18,14 @@ func TestDemoRoutes(t *testing.T) {
 		Recovery: false,
 		Health:   startergin.HealthConfig{Enabled: false},
 		CORS:     startergin.CORSConfig{Enabled: false},
-	}, &startergin.EngineDeps{
-		Middlewares: []startergin.Middleware{requestIDMiddleware()},
-		Configurers: []startergin.EngineConfigurer{engineConfigurer()},
-		KitItems:    []routekit.KitItem{routeHandlers()},
-		Registrars: []routekit.Registrar{
-			publicRoutes(),
-			userRoutes(newUserHandler()),
-		},
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("new demo engine: %v", err)
 	}
+	(&routes{
+		Engine:      engine,
+		UserHandler: newUserHandler(),
+	}).Register()
 
 	public := demoRequest(engine, http.MethodGet, "/hello", nil)
 	if public.Code != http.StatusOK || public.Body.String() != "hello from go-spring-starter-gin" {

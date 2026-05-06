@@ -10,7 +10,7 @@ It follows the official Go-Spring starter style:
 - register beans during `init()`
 - auto-create `*startergin.Engine`
 - auto-create `*gs.HttpServeMux` for Go-Spring's HTTP server
-- let business modules contribute routes through ordered `routekit.Registrar` beans
+- let business modules inject `*startergin.Engine` and register routes explicitly
 
 ## Install
 
@@ -28,18 +28,22 @@ package main
 import (
 	"net/http"
 
-	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
+	startergin "github.com/JavaLionLi/go-spring-starter-gin"
 	"github.com/go-spring/spring-core/gs"
 	_ "github.com/JavaLionLi/go-spring-starter-gin"
 )
 
+type routes struct {
+	Engine *startergin.Engine `autowire:""`
+}
+
 func init() {
-	gs.Provide(func() routekit.Registrar {
-		return routekit.NewRegistrar(100, func(engine *routekit.Engine, kit routekit.Kit) {
-			engine.GET("/hello", func(c *routekit.Context) {
-				c.String(http.StatusOK, "hello")
-			})
-		})
+	gs.Provide(&routes{}).Init((*routes).Register)
+}
+
+func (r *routes) Register() {
+	r.Engine.GET("/hello", func(c *startergin.Context) {
+		c.String(http.StatusOK, "hello")
 	})
 }
 
@@ -102,29 +106,32 @@ spring:
 
 ## Register Routes
 
-Each business module can provide one `routekit.Registrar`. Registrars are sorted by `Order()`.
+The recommended style is to inject `*startergin.Engine` into a business bean and register routes during bean initialization. This keeps routes, middlewares, and dependencies close to the business code.
 
 ```go
 package user
 
 import (
-	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
+	startergin "github.com/JavaLionLi/go-spring-starter-gin"
 	"github.com/go-spring/spring-core/gs"
 )
 
-func init() {
-	gs.Provide(NewHandler)
-	gs.Provide(NewRoutes)
+type Routes struct {
+	Engine  *startergin.Engine `autowire:""`
+	Handler *Handler           `autowire:""`
 }
 
-func NewRoutes(handler *Handler) routekit.Registrar {
-	return routekit.NewRegistrar(500, func(engine *routekit.Engine, kit routekit.Kit) {
-		group := engine.Group("/system/user", kit.Handler("login"))
-		group.GET("", handler.List)
-		group.POST("", handler.Create)
-		group.PUT("/:id", handler.Update)
-		group.DELETE("/:id", handler.Delete)
-	})
+func init() {
+	gs.Provide(NewHandler)
+	gs.Provide(&Routes{}).Init((*Routes).Register)
+}
+
+func (r *Routes) Register() {
+	group := r.Engine.Group("/system/user", RequireLogin())
+	group.GET("", r.Handler.List)
+	group.POST("", r.Handler.Create)
+	group.PUT("/:id", r.Handler.Update)
+	group.DELETE("/:id", r.Handler.Delete)
 }
 ```
 
@@ -150,44 +157,18 @@ import (
 
 ## Named Route Handlers
 
-`routekit.Kit` is a small extension point for route-level middleware such as login, permission, role, encryption, or rate limiting.
-
-Register named handlers:
+For route-level middleware, use the regular Gin style and pass handlers to `Group` or individual routes.
 
 ```go
-package auth
-
-import (
-	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
-	"github.com/go-spring/spring-core/gs"
-)
-
-func init() {
-	gs.Provide(func() routekit.KitItem {
-		return routekit.NewKitItem(100, func(kit *routekit.Kit) {
-			kit.SetHandler("login", RequireLogin())
-			kit.SetHandler("admin", RequireRole("admin"))
-		})
-	})
+func (r *Routes) Register() {
+	group := r.Engine.Group("/system/user", RequireLogin())
+	group.DELETE("/:id", RequireRole("admin"), r.Handler.Delete)
 }
 ```
-
-Use them in routes:
-
-```go
-func NewRoutes(handler *Handler) routekit.Registrar {
-	return routekit.NewRegistrar(500, func(engine *routekit.Engine, kit routekit.Kit) {
-		group := engine.Group("/system/user", kit.Handler("login"))
-		group.DELETE("/:id", kit.Handler("admin"), handler.Delete)
-	})
-}
-```
-
-Missing names return a no-op middleware, so modules can call `kit.Handler("login")` without nil checks.
 
 ## Global Middlewares
 
-Use `startergin.Middleware` when a middleware should be mounted globally with `engine.Use(...)`.
+For global middleware, call `engine.Use(...)` from the same explicit initialization entry point.
 
 ```go
 package httpx
@@ -197,10 +178,16 @@ import (
 	"github.com/go-spring/spring-core/gs"
 )
 
+type Routes struct {
+	Engine *startergin.Engine `autowire:""`
+}
+
 func init() {
-	gs.Provide(func() startergin.Middleware {
-		return startergin.NewMiddleware(100, RequestID())
-	})
+	gs.Provide(&Routes{}).Init((*Routes).Register)
+}
+
+func (r *Routes) Register() {
+	r.Engine.Use(RequestID())
 }
 
 func RequestID() startergin.HandlerFunc {
@@ -210,8 +197,6 @@ func RequestID() startergin.HandlerFunc {
 	}
 }
 ```
-
-Middlewares are sorted by order before registration.
 
 If you need a custom CORS middleware outside the YAML config, use the starter wrapper instead of importing `gin-contrib/cors`:
 
@@ -224,30 +209,58 @@ engine.Use(startergin.CORS(startergin.CORSHandlerConfig{
 
 ## Engine Customization
 
-Use `startergin.EngineConfigurer` for direct access to `*startergin.Engine`, for example `NoRoute`, static files, trusted platform settings, or custom route groups.
+For direct access to `*startergin.Engine`, use the same explicit initialization entry point. This is suitable for `NoRoute`, static files, trusted platform settings, or custom route groups.
 
 ```go
-package httpx
-
-import (
-	"net/http"
-
-	startergin "github.com/JavaLionLi/go-spring-starter-gin"
-	"github.com/go-spring/spring-core/gs"
-)
-
-func init() {
-	gs.Provide(func() startergin.EngineConfigurer {
-		return startergin.NewEngineConfigurer(100, func(engine *startergin.Engine) {
-			engine.NoRoute(func(c *startergin.Context) {
-				c.JSON(http.StatusNotFound, startergin.H{"error": "not found"})
-			})
-		})
+func (r *Routes) Register() {
+	r.Engine.NoRoute(func(c *startergin.Context) {
+		c.JSON(http.StatusNotFound, startergin.H{"error": "not found"})
 	})
 }
 ```
 
-Configurers run after global middlewares and health routes, before business registrars.
+The starter's built-in setup runs logger/recovery, CORS, and health routes before business bean initialization.
+
+## Advanced Auto Collection
+
+For larger modular applications, you can still use the retained auto-collection extension points. The starter collects `startergin.Middleware`, `startergin.EngineConfigurer`, `routekit.KitItem`, and `routekit.Registrar`, then sorts them by `Order()`.
+
+```go
+package user
+
+import (
+	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
+	"github.com/go-spring/spring-core/gs"
+)
+
+func init() {
+	gs.Provide(NewHandler)
+	gs.Provide(NewRoutes)
+}
+
+func NewRoutes(handler *Handler) routekit.Registrar {
+	return routekit.NewRegistrar(500, func(engine *routekit.Engine, kit routekit.Kit) {
+		group := engine.Group("/system/user", kit.Handler("login"))
+		group.GET("", handler.List)
+		group.POST("", handler.Create)
+		group.PUT("/:id", handler.Update)
+		group.DELETE("/:id", handler.Delete)
+	})
+}
+```
+
+`routekit.Kit` can hold named route middleware:
+
+```go
+func init() {
+	gs.Provide(func() routekit.KitItem {
+		return routekit.NewKitItem(100, func(kit *routekit.Kit) {
+			kit.SetHandler("login", RequireLogin())
+			kit.SetHandler("admin", RequireRole("admin"))
+		})
+	})
+}
+```
 
 ## Override Auto Configuration
 
@@ -279,7 +292,6 @@ func init() {
 your-app/
   cmd/server/main.go
   configs/application.yml
-  internal/modules/all/all.go
   internal/modules/auth/
   internal/modules/system/user/
 ```
@@ -292,7 +304,8 @@ package main
 import (
 	"github.com/go-spring/spring-core/gs"
 	_ "github.com/JavaLionLi/go-spring-starter-gin"
-	_ "your-app/internal/modules/all"
+	_ "your-app/internal/modules/auth"
+	_ "your-app/internal/modules/system/user"
 )
 
 func main() {
@@ -325,7 +338,7 @@ curl -X DELETE http://localhost:8080/api/users/42 \
   -H "X-Demo-Role: admin"
 ```
 
-The demo uses `examples/basic/config/application.yml` to set `spring.http.server.addr` to `:8080` and show Gin mode, health, CORS, global middleware, named route handlers, route registration, and `NoRoute` customization.
+The demo uses `examples/basic/config/application.yml` to set `spring.http.server.addr` to `:8080` and show Gin mode, health, CORS, global middleware, route registration, and `NoRoute` customization.
 
 ## Tests
 

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	startergin "github.com/JavaLionLi/go-spring-starter-gin"
-	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
 	"github.com/go-spring/spring-core/gs"
 )
 
@@ -36,58 +35,43 @@ func (h *userHandler) Create(c *startergin.Context) {
 	})
 }
 
-func init() {
-	gs.Provide(newUserHandler)
-	gs.Provide(requestIDMiddleware)
-	gs.Provide(routeHandlers)
-	gs.Provide(engineConfigurer)
-	gs.Provide(publicRoutes)
-	gs.Provide(userRoutes)
+type routes struct {
+	Engine      *startergin.Engine `autowire:""`
+	UserHandler *userHandler       `autowire:""`
 }
 
-func requestIDMiddleware() startergin.Middleware {
-	return startergin.NewMiddleware(100, func(c *startergin.Context) {
+func init() {
+	gs.Provide(newUserHandler)
+	gs.Provide(&routes{}).Init((*routes).Register)
+}
+
+func (r *routes) Register() {
+	r.Engine.Use(requestID())
+	r.Engine.NoRoute(func(c *startergin.Context) {
+		c.JSON(http.StatusNotFound, startergin.H{"error": "route not found"})
+	})
+
+	r.Engine.GET("/hello", func(c *startergin.Context) {
+		c.String(http.StatusOK, "hello from go-spring-starter-gin")
+	})
+
+	group := r.Engine.Group("/api/users", requireHeader("X-Demo-Token", "demo-token"))
+	group.GET("/:id", r.UserHandler.Profile)
+	group.POST("", r.UserHandler.Create)
+	group.DELETE("/:id", requireHeader("X-Demo-Role", "admin"), func(c *startergin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+}
+
+func requestID() startergin.HandlerFunc {
+	return func(c *startergin.Context) {
 		requestID := c.GetHeader("X-Request-ID")
 		if requestID == "" {
 			requestID = "demo-" + time.Now().UTC().Format("20060102150405")
 		}
 		c.Header("X-Request-ID", requestID)
 		c.Next()
-	})
-}
-
-func routeHandlers() routekit.KitItem {
-	return routekit.NewKitItem(100, func(kit *routekit.Kit) {
-		kit.SetHandler("login", requireHeader("X-Demo-Token", "demo-token"))
-		kit.SetHandler("admin", requireHeader("X-Demo-Role", "admin"))
-	})
-}
-
-func engineConfigurer() startergin.EngineConfigurer {
-	return startergin.NewEngineConfigurer(100, func(engine *startergin.Engine) {
-		engine.NoRoute(func(c *startergin.Context) {
-			c.JSON(http.StatusNotFound, startergin.H{"error": "route not found"})
-		})
-	})
-}
-
-func publicRoutes() routekit.Registrar {
-	return routekit.NewRegistrar(100, func(engine *routekit.Engine, kit routekit.Kit) {
-		engine.GET("/hello", func(c *routekit.Context) {
-			c.String(http.StatusOK, "hello from go-spring-starter-gin")
-		})
-	})
-}
-
-func userRoutes(handler *userHandler) routekit.Registrar {
-	return routekit.NewRegistrar(200, func(engine *routekit.Engine, kit routekit.Kit) {
-		group := engine.Group("/api/users", kit.Handler("login"))
-		group.GET("/:id", handler.Profile)
-		group.POST("", handler.Create)
-		group.DELETE("/:id", kit.Handler("admin"), func(c *routekit.Context) {
-			c.Status(http.StatusNoContent)
-		})
-	})
+	}
 }
 
 func requireHeader(name string, value string) startergin.HandlerFunc {

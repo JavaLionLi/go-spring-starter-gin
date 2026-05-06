@@ -1,0 +1,19 @@
+spring:
+  http:
+    server:
+      addr: ":8080"
+      headerTimeout: 5s
+      readTimeout: 10s
+      writeTimeout: 0s
+      idleTimeout: 60s
+  gin:
+    mode: debug
+    logger: true
+    recovery: true
+    health:
+      enabled: true
+      healthz: /healthz
+      ping: /ping
+    cors:
+      enabled: true
+      allow-origins: ["*"]

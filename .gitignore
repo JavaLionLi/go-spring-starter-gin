@@ -1,0 +1,37 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Go build/test output
+bin/
+dist/
+build/
+*.exe
+*.test
+coverage.out
+coverage.txt
+coverage.html
+*.coverprofile
+
+# Local Go caches
+.gocache/
+.gomodcache/
+
+# Temporary files
+tmp/
+temp/
+.tmp/

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	startergin "github.com/JavaLionLi/go-spring-starter-gin"
+	startergin "github.com/CrazyLionCat/go-spring-starter-gin"
 )
 
 // TestDemoRoutes 验证 basic 示例中的公开路由、受保护路由、JSON 绑定和兜底路由行为。

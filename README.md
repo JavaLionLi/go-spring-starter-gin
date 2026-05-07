@@ -15,7 +15,7 @@ It follows the official Go-Spring starter style:
 ## Install
 
 ```bash
-go get github.com/JavaLionLi/go-spring-starter-gin
+go get github.com/CrazyLionCat/go-spring-starter-gin
 ```
 
 ## Quick Start
@@ -28,9 +28,9 @@ package main
 import (
 	"net/http"
 
-	startergin "github.com/JavaLionLi/go-spring-starter-gin"
+	startergin "github.com/CrazyLionCat/go-spring-starter-gin"
 	"github.com/go-spring/spring-core/gs"
-	_ "github.com/JavaLionLi/go-spring-starter-gin"
+	_ "github.com/CrazyLionCat/go-spring-starter-gin"
 )
 
 type routes struct {
@@ -112,7 +112,7 @@ The recommended style is to inject `*startergin.Engine` into a business bean and
 package user
 
 import (
-	startergin "github.com/JavaLionLi/go-spring-starter-gin"
+	startergin "github.com/CrazyLionCat/go-spring-starter-gin"
 	"github.com/go-spring/spring-core/gs"
 )
 
@@ -150,7 +150,7 @@ Then import the aggregator in `main`:
 
 ```go
 import (
-	_ "github.com/JavaLionLi/go-spring-starter-gin"
+	_ "github.com/CrazyLionCat/go-spring-starter-gin"
 	_ "your-app/internal/modules/all"
 )
 ```
@@ -174,7 +174,7 @@ For global middleware, call `engine.Use(...)` from the same explicit initializat
 package httpx
 
 import (
-	startergin "github.com/JavaLionLi/go-spring-starter-gin"
+	startergin "github.com/CrazyLionCat/go-spring-starter-gin"
 	"github.com/go-spring/spring-core/gs"
 )
 
@@ -229,7 +229,7 @@ For larger modular applications, you can still use the retained auto-collection 
 package user
 
 import (
-	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
+	"github.com/CrazyLionCat/go-spring-starter-gin/routekit"
 	"github.com/go-spring/spring-core/gs"
 )
 
@@ -303,7 +303,7 @@ package main
 
 import (
 	"github.com/go-spring/spring-core/gs"
-	_ "github.com/JavaLionLi/go-spring-starter-gin"
+	_ "github.com/CrazyLionCat/go-spring-starter-gin"
 	_ "your-app/internal/modules/auth"
 	_ "your-app/internal/modules/system/user"
 )
@@ -360,5 +360,5 @@ git push origin v0.1.0
 Consumers can then install a fixed version:
 
 ```bash
-go get github.com/JavaLionLi/go-spring-starter-gin@v0.1.0
+go get github.com/CrazyLionCat/go-spring-starter-gin@v0.1.0
 ```

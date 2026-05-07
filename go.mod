@@ -1,4 +1,4 @@
-module github.com/JavaLionLi/go-spring-starter-gin
+module github.com/CrazyLionCat/go-spring-starter-gin
 
 go 1.26.2
 

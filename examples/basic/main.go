@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	startergin "github.com/JavaLionLi/go-spring-starter-gin"
+	startergin "github.com/CrazyLionCat/go-spring-starter-gin"
 	"github.com/go-spring/spring-core/gs"
 )
 

@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
+	"github.com/CrazyLionCat/go-spring-starter-gin/routekit"
 	"github.com/gin-contrib/cors"
 )
 

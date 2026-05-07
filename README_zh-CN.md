@@ -15,7 +15,7 @@
 ## 安装
 
 ```bash
-go get github.com/JavaLionLi/go-spring-starter-gin
+go get github.com/CrazyLionCat/go-spring-starter-gin
 ```
 
 ## 快速开始
@@ -28,9 +28,9 @@ package main
 import (
 	"net/http"
 
-	startergin "github.com/JavaLionLi/go-spring-starter-gin"
+	startergin "github.com/CrazyLionCat/go-spring-starter-gin"
 	"github.com/go-spring/spring-core/gs"
-	_ "github.com/JavaLionLi/go-spring-starter-gin"
+	_ "github.com/CrazyLionCat/go-spring-starter-gin"
 )
 
 type routes struct {
@@ -112,7 +112,7 @@ spring:
 package user
 
 import (
-	startergin "github.com/JavaLionLi/go-spring-starter-gin"
+	startergin "github.com/CrazyLionCat/go-spring-starter-gin"
 	"github.com/go-spring/spring-core/gs"
 )
 
@@ -150,7 +150,7 @@ import (
 
 ```go
 import (
-	_ "github.com/JavaLionLi/go-spring-starter-gin"
+	_ "github.com/CrazyLionCat/go-spring-starter-gin"
 	_ "your-app/internal/modules/all"
 )
 ```
@@ -174,7 +174,7 @@ func (r *Routes) Register() {
 package httpx
 
 import (
-	startergin "github.com/JavaLionLi/go-spring-starter-gin"
+	startergin "github.com/CrazyLionCat/go-spring-starter-gin"
 	"github.com/go-spring/spring-core/gs"
 )
 
@@ -229,7 +229,7 @@ starter 内置配置的执行顺序是：logger/recovery、CORS、健康检查�
 package user
 
 import (
-	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
+	"github.com/CrazyLionCat/go-spring-starter-gin/routekit"
 	"github.com/go-spring/spring-core/gs"
 )
 
@@ -303,7 +303,7 @@ package main
 
 import (
 	"github.com/go-spring/spring-core/gs"
-	_ "github.com/JavaLionLi/go-spring-starter-gin"
+	_ "github.com/CrazyLionCat/go-spring-starter-gin"
 	_ "your-app/internal/modules/auth"
 	_ "your-app/internal/modules/system/user"
 )
@@ -360,5 +360,5 @@ git push origin v0.1.0
 其他项目即可固定版本引用：
 
 ```bash
-go get github.com/JavaLionLi/go-spring-starter-gin@v0.1.0
+go get github.com/CrazyLionCat/go-spring-starter-gin@v0.1.0
 ```

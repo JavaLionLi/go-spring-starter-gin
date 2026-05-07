@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
+	"github.com/CrazyLionCat/go-spring-starter-gin/routekit"
 )
 
 // TestNewEngineRegistersHealthMiddlewareConfigurerAndRoutes 覆盖 Engine 创建主流程：

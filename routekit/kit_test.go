@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+// TestRegisterAllSortsRegistrarsByOrder 验证路由注册器按 Order 稳定排序，
+// 并且 nil 或空函数注册器不会影响其他注册器执行。
 func TestRegisterAllSortsRegistrarsByOrder(t *testing.T) {
 	SetMode(TestMode)
 
@@ -31,6 +33,7 @@ func TestRegisterAllSortsRegistrarsByOrder(t *testing.T) {
 	}
 }
 
+// TestKitHandlerUsesNamedHandler 验证 Kit 会返回最后一次写入的同名处理器。
 func TestKitHandlerUsesNamedHandler(t *testing.T) {
 	SetMode(TestMode)
 
@@ -66,6 +69,7 @@ func TestKitHandlerUsesNamedHandler(t *testing.T) {
 	}
 }
 
+// TestKitIgnoresNilItemsBlankNamesAndNilHandlers 验证 Kit 对 nil、空名称和 nil Handler 的容错。
 func TestKitIgnoresNilItemsBlankNamesAndNilHandlers(t *testing.T) {
 	kit := NewKit([]KitItem{
 		nil,
@@ -112,6 +116,7 @@ func TestKitIgnoresNilItemsBlankNamesAndNilHandlers(t *testing.T) {
 	}
 }
 
+// TestSetHandlerInitializesNilKitMap 验证零值 Kit 也可以直接注册命名处理器。
 func TestSetHandlerInitializesNilKitMap(t *testing.T) {
 	var kit Kit
 	kit.SetHandler("trace", func(c *Context) {
@@ -133,6 +138,7 @@ func TestSetHandlerInitializesNilKitMap(t *testing.T) {
 	}
 }
 
+// TestMissingKitHandlerIsNoOp 验证缺失的命名处理器会退化为 NoOp，不阻断后续处理。
 func TestMissingKitHandlerIsNoOp(t *testing.T) {
 	SetMode(TestMode)
 
@@ -150,6 +156,7 @@ func TestMissingKitHandlerIsNoOp(t *testing.T) {
 	}
 }
 
+// TestNoOpContinuesToNextHandler 验证 NoOp 只继续执行后续 Handler。
 func TestNoOpContinuesToNextHandler(t *testing.T) {
 	SetMode(TestMode)
 
@@ -167,6 +174,7 @@ func TestNoOpContinuesToNextHandler(t *testing.T) {
 	}
 }
 
+// performRequest 封装 routekit 测试中的 HTTP 请求发送。
 func performRequest(engine *Engine, method string, path string) *httptest.ResponseRecorder {
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(method, path, nil)

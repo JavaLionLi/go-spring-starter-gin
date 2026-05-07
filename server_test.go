@@ -2,6 +2,7 @@ package startergin
 
 import "testing"
 
+// TestNewHTTPServeMux 验证 Gin Engine 会被原样包装到 go-spring HttpServeMux 中。
 func TestNewHTTPServeMux(t *testing.T) {
 	engine := New()
 	mux, err := NewHTTPServeMux(engine)
@@ -13,6 +14,7 @@ func TestNewHTTPServeMux(t *testing.T) {
 	}
 }
 
+// TestNewHTTPServeMuxRejectsNilEngine 验证缺失 Engine 时返回明确错误，避免启动空服务。
 func TestNewHTTPServeMuxRejectsNilEngine(t *testing.T) {
 	if _, err := NewHTTPServeMux(nil); err == nil {
 		t.Fatal("expected error")

@@ -9,6 +9,7 @@ import (
 	startergin "github.com/JavaLionLi/go-spring-starter-gin"
 )
 
+// TestDemoRoutes 验证 basic 示例中的公开路由、受保护路由、JSON 绑定和兜底路由行为。
 func TestDemoRoutes(t *testing.T) {
 	startergin.SetMode(startergin.TestMode)
 
@@ -88,10 +89,12 @@ func TestDemoRoutes(t *testing.T) {
 	}
 }
 
+// demoRequest 发送无请求体的示例测试请求。
 func demoRequest(engine *startergin.Engine, method string, path string, headers map[string]string) *httptest.ResponseRecorder {
 	return demoJSONRequest(engine, method, path, "", headers)
 }
 
+// demoJSONRequest 发送带可选 JSON 请求体和自定义 Header 的示例测试请求。
 func demoJSONRequest(engine *startergin.Engine, method string, path string, body string, headers map[string]string) *httptest.ResponseRecorder {
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(method, path, strings.NewReader(body))

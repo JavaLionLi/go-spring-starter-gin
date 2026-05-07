@@ -10,6 +10,8 @@ import (
 	"github.com/JavaLionLi/go-spring-starter-gin/routekit"
 )
 
+// TestNewEngineRegistersHealthMiddlewareConfigurerAndRoutes 覆盖 Engine 创建主流程：
+// 健康检查、业务中间件排序、Configurer 执行和 routekit 路由注册。
 func TestNewEngineRegistersHealthMiddlewareConfigurerAndRoutes(t *testing.T) {
 	cfg := Config{
 		Mode:     TestMode,
@@ -76,6 +78,8 @@ func TestNewEngineRegistersHealthMiddlewareConfigurerAndRoutes(t *testing.T) {
 	assertResponse(t, engine, http.MethodGet, "/not-found", http.StatusNotFound, "missing")
 }
 
+// TestNewEngineWithNilDepsRegistersDefaultHealth 验证 deps 为 nil 时仍能创建 Engine，
+// 并按配置注册默认健康检查路由。
 func TestNewEngineWithNilDepsRegistersDefaultHealth(t *testing.T) {
 	cfg := Config{
 		Mode:     TestMode,
@@ -98,6 +102,7 @@ func TestNewEngineWithNilDepsRegistersDefaultHealth(t *testing.T) {
 	assertResponse(t, engine, http.MethodGet, "/live", http.StatusOK, "pong")
 }
 
+// TestNewEngineSkipsDisabledHealthAndBlankHealthPaths 验证健康检查关闭或路径为空时不会注册路由。
 func TestNewEngineSkipsDisabledHealthAndBlankHealthPaths(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -144,6 +149,7 @@ func TestNewEngineSkipsDisabledHealthAndBlankHealthPaths(t *testing.T) {
 	}
 }
 
+// TestNewEngineConfiguresCORS 验证 spring.gin.cors 配置会转换成可用的 CORS 中间件。
 func TestNewEngineConfiguresCORS(t *testing.T) {
 	cfg := Config{
 		Mode:     TestMode,
@@ -208,6 +214,8 @@ func TestNewEngineConfiguresCORS(t *testing.T) {
 	assertHeaderContains(t, actual, "Access-Control-Expose-Headers", "X-Trace-ID")
 }
 
+// TestNewEngineUsesDefaultCORSListsWhenConfiguredListsAreBlank 验证 CORS 列表配置只有空白项时
+// 会回退到 starter 默认值。
 func TestNewEngineUsesDefaultCORSListsWhenConfiguredListsAreBlank(t *testing.T) {
 	engine, err := NewEngine(Config{
 		Mode:     TestMode,
@@ -239,6 +247,7 @@ func TestNewEngineUsesDefaultCORSListsWhenConfiguredListsAreBlank(t *testing.T) 
 	}
 }
 
+// TestNewEngineIgnoresBlankTrustedProxies 验证空白可信代理不会触发 Gin 的格式校验错误。
 func TestNewEngineIgnoresBlankTrustedProxies(t *testing.T) {
 	cfg := Config{
 		Mode:           TestMode,
@@ -254,6 +263,7 @@ func TestNewEngineIgnoresBlankTrustedProxies(t *testing.T) {
 	}
 }
 
+// TestNewEngineReturnsTrustedProxyErrors 验证非法可信代理配置会阻止 Engine 创建成功。
 func TestNewEngineReturnsTrustedProxyErrors(t *testing.T) {
 	cfg := Config{
 		Mode:           TestMode,
@@ -269,6 +279,7 @@ func TestNewEngineReturnsTrustedProxyErrors(t *testing.T) {
 	}
 }
 
+// TestNewEngineIgnoresNilDependencies 验证各类可选依赖中的 nil 值都会被安全跳过。
 func TestNewEngineIgnoresNilDependencies(t *testing.T) {
 	engine, err := NewEngine(Config{
 		Mode:     TestMode,
@@ -310,6 +321,7 @@ func TestNewEngineIgnoresNilDependencies(t *testing.T) {
 	}
 }
 
+// assertResponse 发送请求并断言状态码和完整响应体。
 func assertResponse(t *testing.T, engine *Engine, method string, path string, status int, contains string) *httptest.ResponseRecorder {
 	t.Helper()
 
@@ -326,6 +338,7 @@ func assertResponse(t *testing.T, engine *Engine, method string, path string, st
 	return recorder
 }
 
+// assertHeaderContains 以大小写不敏感方式断言响应头包含指定值。
 func assertHeaderContains(t *testing.T, recorder *httptest.ResponseRecorder, name string, value string) {
 	t.Helper()
 

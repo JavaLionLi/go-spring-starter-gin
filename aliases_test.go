@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+// TestReExportedGinHelpersBuildRoutesWithoutGinImport 验证业务代码只导入 startergin
+// 时，仍能使用常见 Gin 类型、认证中间件和标准库 Handler 包装能力。
 func TestReExportedGinHelpersBuildRoutesWithoutGinImport(t *testing.T) {
 	SetMode(TestMode)
 
@@ -42,6 +44,8 @@ func TestReExportedGinHelpersBuildRoutesWithoutGinImport(t *testing.T) {
 	}
 }
 
+// TestCORSHelperBuildsCorsMiddlewareWithoutCorsImport 验证 CORS 辅助函数可直接
+// 基于 startergin 暴露的配置类型创建跨域中间件。
 func TestCORSHelperBuildsCorsMiddlewareWithoutCorsImport(t *testing.T) {
 	SetMode(TestMode)
 
@@ -70,6 +74,7 @@ func TestCORSHelperBuildsCorsMiddlewareWithoutCorsImport(t *testing.T) {
 	}
 }
 
+// TestCreateTestContextAliases 验证测试辅助函数的类型别名能正常返回 Context 和 Engine。
 func TestCreateTestContextAliases(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	context, engine := CreateTestContext(recorder)
@@ -81,6 +86,7 @@ func TestCreateTestContextAliases(t *testing.T) {
 	}
 }
 
+// aliasRequest 封装测试请求创建，减少别名透传测试中的重复代码。
 func aliasRequest(engine *Engine, method string, path string, authorization string) *httptest.ResponseRecorder {
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(method, path, nil)
